@@ -1,6 +1,7 @@
 package io.servertap;
 
 import io.servertap.api.v1.models.ConsoleLine;
+import io.servertap.api.v1.websockets.models.HelloWorldObj;
 import io.servertap.commands.ServerTapCommand;
 import io.servertap.metrics.Metrics;
 import io.servertap.plugin.api.ServerTapWebserverService;
@@ -37,6 +38,7 @@ public class ServerTapMain extends JavaPlugin {
     private final LagDetector lagDetector;
     private final Server server;
     private WebServer app;
+    private WebSocketServer io;
 
     public ServerTapMain() {
         super();
@@ -72,6 +74,7 @@ public class ServerTapMain extends JavaPlugin {
         rootLogger.addFilter(consoleListener);
 
         setupWebServer(bukkitConfig);
+        setupWebSocketServer(bukkitConfig);
 
         new ServerTapCommand(this);
 
@@ -82,9 +85,22 @@ public class ServerTapMain extends JavaPlugin {
     }
 
     private void setupWebServer(FileConfiguration bukkitConfig) {
+        log.info("LOL");
         app = new WebServer(this, bukkitConfig, log);
         app.start(bukkitConfig.getInt("port", 4567));
         WebServerRoutes.addV1Routes(this, log, lagDetector, app, consoleListener, externalPluginWrapperRepo);
+    }
+
+    private void setupWebSocketServer(FileConfiguration bukkitConfig) {
+        log.info("[Servertap] IO Created");
+        io = new WebSocketServer(this, bukkitConfig, log);
+
+        io.on("connection", (socket) -> {
+            log.info("Run!");
+            socket.emit("hello", new HelloWorldObj("Sam", "Hi!"));
+        });
+
+        io.start();
     }
 
     public void reload() {
