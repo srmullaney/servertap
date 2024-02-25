@@ -232,14 +232,6 @@ public class ServerApi {
 
     // WHITELIST STUFF --------------------------------------------------------
 
-    private boolean hasWhitelist(Context ctx) {
-        if (!bukkitServer.hasWhitelist()) {
-            ctx.json("error: The server has whitelist disabled");
-            return false;
-        }
-        return true;
-    }
-
     private PlayerInfo getPlayerFromCtx(Context ctx) {
         try {
             Optional<PlayerInfo> playerOpt = MojangApiService.getPlayerInfoByUUIDOrName(ctx.formParam("uuid"), ctx.formParam("name"));
@@ -263,7 +255,6 @@ public class ServerApi {
             }
     )
     public void whitelistGet(Context ctx) {
-        if(!hasWhitelist(ctx)) return;
         ctx.json(getWhitelist());
     }
 
@@ -304,11 +295,9 @@ public class ServerApi {
 
         final WhitelistPlayer newEntry = new WhitelistPlayer().uuid(player.getId()).name(player.getName());
         ArrayList<WhitelistPlayer> whitelist = getWhitelist();
-        for (WhitelistPlayer p : whitelist) {
-            if (p.equals(newEntry)) {
-                ctx.json("Error: duplicate entry");
-                return;
-            }
+        if(whitelist.contains(newEntry)) {
+            ctx.json("Error: duplicate entry");
+            return;
         }
         whitelist.add(newEntry);
         final String json = GsonSingleton.getInstance().toJson(whitelist);
