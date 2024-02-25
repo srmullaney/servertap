@@ -7,6 +7,7 @@ import io.javalin.http.ServiceUnavailableResponse;
 import io.javalin.openapi.*;
 import io.servertap.Constants;
 import io.servertap.ServerTapMain;
+import io.servertap.mojang.api.models.PlayerInfo;
 import io.servertap.utils.LagDetector;
 import io.servertap.utils.ServerExecCommandSender;
 import io.servertap.api.v1.models.*;
@@ -229,6 +230,26 @@ public class ServerApi {
         ctx.json(Objective.fromBukkitObjective(objective, scoreboardManager));
     }
 
+    // WHITELIST STUFF --------------------------------------------------------
+
+    private boolean hasWhitelist(Context ctx) {
+        if (!bukkitServer.hasWhitelist()) {
+            ctx.json("error: The server has whitelist disabled");
+            return false;
+        }
+        return true;
+    }
+
+    private PlayerInfo getPlayerFromCtx(Context ctx) {
+        try {
+            Optional<PlayerInfo> playerOpt = MojangApiService.getPlayerInfoByUUIDOrName(ctx.formParam("uuid"), ctx.formParam("name"));
+            if(playerOpt.isEmpty()) throw new NotFoundResponse(Constants.MOJANG_PLAYER_NOT_FOUND);
+            return playerOpt.get();
+        } catch (IOException e) {
+            throw new ServiceUnavailableResponse(Constants.MOJANG_API_FAIL);
+        }
+    }
+
     @OpenApi(
             path = "/v1/server/whitelist",
             methods = {HttpMethod.GET},
@@ -238,21 +259,17 @@ public class ServerApi {
                     @OpenApiParam(name = "key")
             },
             responses = {
-                    @OpenApiResponse(status = "200", content = @OpenApiContent(from = Whitelist.class))
+                    @OpenApiResponse(status = "200", content = @OpenApiContent(from = WhitelistPlayer.class))
             }
     )
     public void whitelistGet(Context ctx) {
-        if (bukkitServer.hasWhitelist()) {
-            // TODO: Handle Errors better
-            ctx.json("error: The server has whitelist disabled");
-            return;
-        }
+        if(!hasWhitelist(ctx)) return;
         ctx.json(getWhitelist());
     }
 
-    public ArrayList<Whitelist> getWhitelist() {
-        ArrayList<Whitelist> whitelist = new ArrayList<>();
-        bukkitServer.getWhitelistedPlayers().forEach((org.bukkit.OfflinePlayer player) -> whitelist.add(new Whitelist().offlinePlayer(player)));
+    public ArrayList<WhitelistPlayer> getWhitelist() {
+        ArrayList<WhitelistPlayer> whitelist = new ArrayList<>();
+        bukkitServer.getWhitelistedPlayers().forEach((org.bukkit.OfflinePlayer player) -> whitelist.add(new WhitelistPlayer().offlinePlayer(player)));
         return whitelist;
     }
 
@@ -282,36 +299,13 @@ public class ServerApi {
             }
     )
     public void whitelistPost(Context ctx) {
-        if (!bukkitServer.hasWhitelist()) {
-            ctx.json("No whitelist");
-            return;
-        }
-
-        String uuid = ctx.formParam("uuid");
-        String name = ctx.formParam("name");
-
-        if (uuid == null && name == null) throw new BadRequestResponse(Constants.WHITELIST_MISSING_PARAMS);
-
-        //Check Mojang API for missing param
-        if (uuid == null) {
-            try {
-                uuid = MojangApiService.getUuid(name);
-            } catch (IllegalArgumentException ignored) {
-                throw new NotFoundResponse(Constants.WHITELIST_NAME_NOT_FOUND);
-            } catch (IOException ignored) {
-                throw new ServiceUnavailableResponse(Constants.WHITELIST_MOJANG_API_FAIL);
-            }
-        } // **MojangApiService.getNameHistory was deprecated and then removed**
-
-        //Whitelist file doesn't accept UUIDs without dashes
-        uuid = uuid.replaceAll("(\\w{8})(\\w{4})(\\w{4})(\\w{4})(\\w{12})", "$1-$2-$3-$4-$5");
-
+        PlayerInfo player = getPlayerFromCtx(ctx);
         final File directory = new File("./");
 
-        final Whitelist newEntry = new Whitelist().uuid(uuid).name(name);
-        ArrayList<Whitelist> whitelist = getWhitelist();
-        for (Whitelist player : whitelist) {
-            if (player.equals(newEntry)) {
+        final WhitelistPlayer newEntry = new WhitelistPlayer().uuid(player.getId()).name(player.getName());
+        ArrayList<WhitelistPlayer> whitelist = getWhitelist();
+        for (WhitelistPlayer p : whitelist) {
+            if (p.equals(newEntry)) {
                 ctx.json("Error: duplicate entry");
                 return;
             }
@@ -356,35 +350,11 @@ public class ServerApi {
             responses = {@OpenApiResponse(status = "200")}
     )
     public void whitelistDelete(Context ctx) {
-        if (!bukkitServer.hasWhitelist()) {
-            ctx.json("No whitelist");
-            return;
-        }
-
-        String uuid = ctx.formParam("uuid");
-        String name = ctx.formParam("name");
-
-        if (uuid == null && name == null) throw new BadRequestResponse(Constants.WHITELIST_MISSING_PARAMS);
-
-        //Check Mojang API for missing param
-        if (uuid == null) {
-            try {
-                uuid = MojangApiService.getUuid(name);
-            } catch (IllegalArgumentException ignored) {
-                throw new NotFoundResponse(Constants.WHITELIST_NAME_NOT_FOUND);
-            } catch (IOException ignored) {
-                throw new ServiceUnavailableResponse(Constants.WHITELIST_MOJANG_API_FAIL);
-            }
-        } // **MojangApiService.getNameHistory was deprecated and then removed**
-
-        //Whitelist file doesn't accept UUIDs without dashes
-        uuid = uuid.replaceAll("(\\w{8})(\\w{4})(\\w{4})(\\w{4})(\\w{12})", "$1-$2-$3-$4-$5");
-
+        PlayerInfo player = getPlayerFromCtx(ctx);
         final File directory = new File("./");
-        ArrayList<Whitelist> whitelist = getWhitelist();
+        ArrayList<WhitelistPlayer> whitelist = getWhitelist();
 
-        String finalUuid = uuid;
-        whitelist.removeIf(entry -> entry.getUuid().toLowerCase().equals(finalUuid));
+        whitelist.removeIf(entry -> entry.getUuid().toLowerCase().equals(player.getId()));
 
         final String json = GsonSingleton.getInstance().toJson(whitelist);
         try {
@@ -425,17 +395,9 @@ public class ServerApi {
                     @OpenApiResponse(status = "200")
             })
     public void opPlayer(Context ctx) {
-        String uuid = ctx.formParam("playerUuid");
-        String name = ctx.formParam("name");
-
-        if (name.isEmpty()) throw new BadRequestResponse(Constants.PLAYER_MISSING_PARAMS);
-
-        UUID playerUUID = ValidationUtils.safeUUID(uuid);
-        if (playerUUID == null) throw new BadRequestResponse(Constants.INVALID_UUID);
-
-        org.bukkit.OfflinePlayer player = Bukkit.getOfflinePlayer(playerUUID);
-        if (player == null) throw new NotFoundResponse(Constants.PLAYER_NOT_FOUND);
-        player.setOp(true);
+        PlayerInfo player = getPlayerFromCtx(ctx);
+        org.bukkit.OfflinePlayer offlinePlayer = Bukkit.getOfflinePlayer(UUID.fromString(player.getId()));
+        offlinePlayer.setOp(true);
         ctx.json("success");
     }
 
@@ -461,16 +423,9 @@ public class ServerApi {
             responses = {@OpenApiResponse(status = "200")}
     )
     public void deopPlayer(Context ctx) {
-        String uuid = ctx.formParam("playerUuid");
-
-        if (uuid.isEmpty()) throw new BadRequestResponse(Constants.PLAYER_MISSING_PARAMS);
-
-        UUID playerUUID = ValidationUtils.safeUUID(uuid);
-        if (playerUUID == null) throw new BadRequestResponse(Constants.INVALID_UUID);
-
-        org.bukkit.OfflinePlayer player = Bukkit.getOfflinePlayer(playerUUID);
-        if (player == null) throw new NotFoundResponse(Constants.PLAYER_NOT_FOUND);
-        player.setOp(false);
+        PlayerInfo player = getPlayerFromCtx(ctx);
+        org.bukkit.OfflinePlayer offlinePlayer = Bukkit.getOfflinePlayer(UUID.fromString(player.getId()));
+        offlinePlayer.setOp(false);
         ctx.json("success");
     }
 

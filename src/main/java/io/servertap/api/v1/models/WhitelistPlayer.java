@@ -3,20 +3,20 @@ package io.servertap.api.v1.models;
 import com.google.gson.annotations.Expose;
 import org.bukkit.OfflinePlayer;
 
-public class Whitelist {
+public class WhitelistPlayer {
     @Expose
     private String uuid = null;
 
     @Expose
     private String name = null;
 
-    public Whitelist offlinePlayer(OfflinePlayer player) {
+    public WhitelistPlayer offlinePlayer(OfflinePlayer player) {
         this.uuid = player.getUniqueId().toString();
         this.name = player.getName();
         return this;
     }
 
-    public Whitelist uuid(String uuid) {
+    public WhitelistPlayer uuid(String uuid) {
         this.uuid = uuid;
         return this;
     }
@@ -34,7 +34,7 @@ public class Whitelist {
         this.uuid = uuid;
     }
 
-    public Whitelist name(String displayName) {
+    public WhitelistPlayer name(String displayName) {
         this.name = displayName;
         return this;
     }
@@ -52,7 +52,7 @@ public class Whitelist {
         this.name = displayName;
     }
 
-    public boolean equals(Whitelist whitelist) {
+    public boolean equals(WhitelistPlayer whitelist) {
         return whitelist.getUuid().equals(this.uuid);
     }
 }

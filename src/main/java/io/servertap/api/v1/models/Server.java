@@ -35,7 +35,7 @@ public class Server {
     private ArrayList<ServerBan> bannedPlayers = null;
 
     @Expose
-    private ArrayList<Whitelist> whitelistedPlayers = null;
+    private ArrayList<WhitelistPlayer> whitelistedPlayers = null;
 
     @Expose
     private int maxPlayers = 0;
@@ -117,11 +117,11 @@ public class Server {
         this.bannedPlayers = bannedPlayers;
     }
 
-    public ArrayList<Whitelist> getWhitelistedPlayers() {
+    public ArrayList<WhitelistPlayer> getWhitelistedPlayers() {
         return whitelistedPlayers;
     }
 
-    public void setWhitelistedPlayers(ArrayList<Whitelist> whitelistPlayers) {
+    public void setWhitelistedPlayers(ArrayList<WhitelistPlayer> whitelistPlayers) {
         this.whitelistedPlayers = whitelistPlayers;
     }
 
@@ -141,9 +141,9 @@ public class Server {
         this.onlinePlayers = onlinePlayers;
     }
 
-    private static ArrayList<Whitelist> getWhitelist(org.bukkit.Server bukkitServer) {
-        ArrayList<Whitelist> whitelist = new ArrayList<>();
-        bukkitServer.getWhitelistedPlayers().forEach((OfflinePlayer player) -> whitelist.add(new Whitelist().offlinePlayer(player)));
+    private static ArrayList<WhitelistPlayer> getWhitelist(org.bukkit.Server bukkitServer) {
+        ArrayList<WhitelistPlayer> whitelist = new ArrayList<>();
+        bukkitServer.getWhitelistedPlayers().forEach((OfflinePlayer player) -> whitelist.add(new WhitelistPlayer().offlinePlayer(player)));
         return whitelist;
     }
 

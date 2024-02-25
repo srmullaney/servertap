@@ -1,8 +1,6 @@
 package io.servertap.mojang.api;
 
 import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
-import io.servertap.mojang.api.models.NameChange;
 import io.servertap.mojang.api.models.PlayerInfo;
 import io.servertap.utils.GsonSingleton;
 
@@ -10,25 +8,35 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.lang.reflect.Type;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 public class MojangApiService {
     private static final String getUuidResource = "https://api.mojang.com/users/profiles/minecraft/%s";
+    private static final String getNameResource = "https://api.mojang.com/user/profile/%s";
 
-    public static String getUuid(String username) throws IOException {
+    public static Optional<PlayerInfo> getPlayerInfoByUUIDOrName(String UUID, String name) throws IOException {
+        if(name != null && !name.isEmpty()) return getPlayerInfoFromName(name);
+        if(UUID != null && !UUID.isEmpty()) return getPlayerInfoFromUUID(UUID);
+        return Optional.empty();
+    }
+
+    private static Optional<PlayerInfo> getPlayerInfo(String username, String getUuidResource) throws IOException {
         Gson gson = GsonSingleton.getInstance();
-
         ApiResponse apiResponse = getApiResponse(String.format(getUuidResource, username));
-        if (apiResponse.getHttpStatus() == HttpURLConnection.HTTP_NO_CONTENT) {
-            throw new IllegalArgumentException("The given username was not found by the Mojang API.");
-        }
+        PlayerInfo player = gson.fromJson(apiResponse.getContent(), PlayerInfo.class);
+        return player.getId().isEmpty() ? Optional.empty() : Optional.of(player);
+    }
 
-        return gson.fromJson(apiResponse.getContent(), PlayerInfo.class).getId();
+    public static Optional<PlayerInfo> getPlayerInfoFromName(String username) throws IOException {
+        return getPlayerInfo(username, getUuidResource);
+    }
+
+    public static Optional<PlayerInfo> getPlayerInfoFromUUID(String uuid) throws IOException {
+        return getPlayerInfo(uuid, getNameResource);
     }
 
     private static ApiResponse getApiResponse(String resource) throws IOException {
@@ -39,7 +47,6 @@ public class MojangApiService {
             HttpURLConnection http = (HttpURLConnection) url.openConnection();
             http.setRequestMethod("GET");
             http.setDoInput(true);
-
             http.connect();
 
             if (http.getResponseCode() == HttpURLConnection.HTTP_BAD_REQUEST) return new ApiResponse("", http.getResponseCode());
