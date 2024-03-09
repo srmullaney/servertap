@@ -14,7 +14,8 @@ public class PlayerInfo {
     }
 
     public void setId(String id) {
-        this.id = id;
+        //Whitelist file doesn't accept UUIDs without dashes
+        this.id = id.replaceAll("(\\w{8})(\\w{4})(\\w{4})(\\w{4})(\\w{12})", "$1-$2-$3-$4-$5");
     }
 
     public String getName() {

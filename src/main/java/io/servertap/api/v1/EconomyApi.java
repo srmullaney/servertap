@@ -7,6 +7,7 @@ import io.javalin.http.InternalServerErrorResponse;
 import io.javalin.openapi.*;
 import io.servertap.Constants;
 import io.servertap.api.v1.models.Plugin;
+import io.servertap.utils.ValidationUtils;
 import io.servertap.utils.pluginwrappers.EconomyWrapper;
 import net.milkbowl.vault.economy.Economy;
 import net.milkbowl.vault.economy.EconomyResponse;
@@ -25,7 +26,7 @@ public class EconomyApi {
         this.economy = economyWrapper;
     }
 
-    private enum TransactionType {
+    public enum TransactionType {
         PAY, DEBIT
     }
 
@@ -83,7 +84,10 @@ public class EconomyApi {
             }
     )
     public void playerPay(Context ctx) {
-        accountManager(ctx, TransactionType.PAY);
+        String uuid = ctx.formParam("uuid");
+        String amount = ctx.formParam("amount");
+        accountManager(uuid, amount, TransactionType.PAY);
+        ctx.status(200).json("success");
     }
 
     @OpenApi(
@@ -113,13 +117,13 @@ public class EconomyApi {
             }
     )
     public void playerDebit(Context ctx) {
-        accountManager(ctx, TransactionType.DEBIT);
-    }
-
-    private void accountManager(Context ctx, TransactionType action) {
         String uuid = ctx.formParam("uuid");
         String amount = ctx.formParam("amount");
+        accountManager(uuid, amount, TransactionType.DEBIT);
+        ctx.status(200).json("success");
+    }
 
+    public void accountManager(String uuid, String amount, TransactionType action) {
         if (uuid == null || amount == null) {
             throw new BadRequestResponse(Constants.VAULT_MISSING_PAY_PARAMS);
         }
@@ -151,7 +155,5 @@ public class EconomyApi {
         if (response.type != EconomyResponse.ResponseType.SUCCESS) {
             throw new InternalServerErrorResponse(response.errorMessage);
         }
-
-        ctx.status(200).json("success");
     }
 }

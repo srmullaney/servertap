@@ -12,6 +12,7 @@ import io.servertap.utils.LagDetector;
 import io.servertap.utils.ServerExecCommandSender;
 import io.servertap.api.v1.models.*;
 import io.servertap.mojang.api.MojangApiService;
+import io.servertap.utils.ValidationUtils;
 import io.servertap.utils.pluginwrappers.EconomyWrapper;
 import io.servertap.utils.GsonSingleton;
 import org.apache.commons.lang.StringUtils;
@@ -131,8 +132,12 @@ public class ServerApi {
     public void broadcastPost(Context ctx) {
         String msg = ctx.formParam("message");
         if (msg != null && msg.isEmpty()) throw new BadRequestResponse(Constants.CHAT_MISSING_MESSAGE);
-        Bukkit.broadcastMessage(msg);
+        broadcastMsg(msg);
         ctx.json("success");
+    }
+
+    public void broadcastMsg(String msg) {
+        Bukkit.broadcastMessage(msg);
     }
 
     @OpenApi(
@@ -164,15 +169,17 @@ public class ServerApi {
         String uuid = ctx.formParam("playerUuid");
         if (msg != null && msg.isEmpty()) throw new BadRequestResponse(Constants.CHAT_MISSING_MESSAGE);
         if (uuid != null && uuid.isEmpty()) throw new BadRequestResponse(Constants.PLAYER_UUID_MISSING);
+        tell(uuid, msg);
+        ctx.json("success");
+    }
 
+    public void tell(String uuid, String msg) {
         UUID playerUUID = ValidationUtils.safeUUID(uuid);
         if (playerUUID == null) throw new BadRequestResponse(Constants.INVALID_UUID);
 
         org.bukkit.entity.Player player = Bukkit.getPlayer(playerUUID);
         if (player == null) throw new NotFoundResponse(Constants.PLAYER_NOT_FOUND);
         player.sendMessage(msg);
-
-        ctx.json("success");
     }
 
     @OpenApi(
@@ -251,17 +258,17 @@ public class ServerApi {
                     @OpenApiParam(name = "key")
             },
             responses = {
-                    @OpenApiResponse(status = "200", content = @OpenApiContent(from = WhitelistPlayer.class))
+                    @OpenApiResponse(status = "200", content = @OpenApiContent(from = Whitelist.class))
             }
     )
     public void whitelistGet(Context ctx) {
         ctx.json(getWhitelist());
     }
 
-    public ArrayList<WhitelistPlayer> getWhitelist() {
-        ArrayList<WhitelistPlayer> whitelist = new ArrayList<>();
-        bukkitServer.getWhitelistedPlayers().forEach((org.bukkit.OfflinePlayer player) -> whitelist.add(new WhitelistPlayer().offlinePlayer(player)));
-        return whitelist;
+    public Whitelist getWhitelist() {
+        ArrayList<WhitelistPlayer> whitelistedPlayers = new ArrayList<>();
+        bukkitServer.getWhitelistedPlayers().forEach((org.bukkit.OfflinePlayer player) -> whitelistedPlayers.add(new WhitelistPlayer().offlinePlayer(player)));
+        return new Whitelist(whitelistedPlayers, bukkitServer.hasWhitelist());
     }
 
     @OpenApi(
@@ -294,7 +301,7 @@ public class ServerApi {
         final File directory = new File("./");
 
         final WhitelistPlayer newEntry = new WhitelistPlayer().uuid(player.getId()).name(player.getName());
-        ArrayList<WhitelistPlayer> whitelist = getWhitelist();
+        ArrayList<WhitelistPlayer> whitelist = getWhitelist().getWhitelistedPlayers();
         if(whitelist.contains(newEntry)) {
             ctx.json("Error: duplicate entry");
             return;
@@ -341,7 +348,7 @@ public class ServerApi {
     public void whitelistDelete(Context ctx) {
         PlayerInfo player = getPlayerFromCtx(ctx);
         final File directory = new File("./");
-        ArrayList<WhitelistPlayer> whitelist = getWhitelist();
+        ArrayList<WhitelistPlayer> whitelist = getWhitelist().getWhitelistedPlayers();
 
         whitelist.removeIf(entry -> entry.getUuid().toLowerCase().equals(player.getId()));
 

@@ -68,7 +68,7 @@ public class FileWatcher {
             try {
                 key.set(ws.poll());
             } catch (IllegalStateException e) {
-                log.warning("[ServerTap] FileWatcher Timed out... Some SSE & WebSocket Events may stop working!");
+                log.warning("[ServerTap] FileWatcher Timed out... WebSocket Events may stop working!");
                 EventPollTask.get().cancel();
             }
 

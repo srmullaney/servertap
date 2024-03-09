@@ -3,20 +3,20 @@ package io.servertap.api.v1.websockets.models.events;
 import io.servertap.utils.GsonSingleton;
 
 public class ClientMessage {
-    private String name;
+    private String event;
     private String payload;
 
     public ClientMessage(String name, String payload) {
-        this.name = name;
+        this.event = name;
         this.payload = payload;
     }
 
-    public String getName() {
-        return name;
+    public String getEvent() {
+        return event;
     }
 
-    public void setName(String name) {
-        this.name = name;
+    public void setEvent(String event) {
+        this.event = event;
     }
 
     public String getPayload() {

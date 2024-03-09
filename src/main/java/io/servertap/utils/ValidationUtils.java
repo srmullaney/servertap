@@ -1,4 +1,4 @@
-package io.servertap.api.v1;
+package io.servertap.utils;
 
 import java.util.UUID;
 

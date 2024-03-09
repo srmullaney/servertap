@@ -8,6 +8,7 @@ import io.javalin.openapi.*;
 import io.servertap.Constants;
 import io.servertap.ServerTapMain;
 import io.servertap.api.v1.models.World;
+import io.servertap.utils.ValidationUtils;
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
 import org.apache.commons.compress.compressors.gzip.GzipCompressorOutputStream;

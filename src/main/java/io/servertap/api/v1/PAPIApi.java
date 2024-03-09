@@ -4,6 +4,7 @@ import io.javalin.http.BadRequestResponse;
 import io.javalin.http.Context;
 import io.javalin.openapi.*;
 import io.servertap.Constants;
+import io.servertap.utils.ValidationUtils;
 import me.clip.placeholderapi.PlaceholderAPI;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
@@ -37,12 +38,16 @@ public class PAPIApi {
                     @OpenApiResponse(status = "500", content = @OpenApiContent(type = "application/json"))
             }
     )
-    public void replacePlaceholders(Context ctx) {
-        OfflinePlayer player = null;
-
+    public void replacePlaceholdersGet(Context ctx) {
         String passedUuid = ctx.formParam("uuid");
-        if (passedUuid != null && !passedUuid.isEmpty()) {
-            UUID playerUUID = ValidationUtils.safeUUID(passedUuid);
+        String passedMessage = ctx.formParam("message");
+        ctx.status(200).json(replacePlaceholders(passedUuid, passedMessage));
+    }
+
+    public String replacePlaceholders(String uuid, String msg) {
+        OfflinePlayer player = null;
+        if (uuid != null && !uuid.isEmpty()) {
+            UUID playerUUID = ValidationUtils.safeUUID(uuid);
             if (playerUUID == null) {
                 throw new BadRequestResponse(Constants.INVALID_UUID);
             }
@@ -50,15 +55,13 @@ public class PAPIApi {
             player = Bukkit.getOfflinePlayer(playerUUID);
         }
 
-        String passedMessage = ctx.formParam("message");
-        if (passedMessage == null || passedMessage.isEmpty()) {
+        if (msg == null || msg.isEmpty()) {
             throw new BadRequestResponse(Constants.PAPI_MESSAGE_MISSING);
         }
 
         if (Bukkit.getPluginManager().isPluginEnabled("PlaceholderAPI")) {
-            passedMessage = PlaceholderAPI.setPlaceholders(player, passedMessage);
+            msg = PlaceholderAPI.setPlaceholders(player, msg);
         }
-
-        ctx.status(200).json(passedMessage);
+        return msg;
     }
 }

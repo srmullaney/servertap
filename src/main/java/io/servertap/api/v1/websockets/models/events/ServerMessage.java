@@ -1,24 +1,24 @@
 package io.servertap.api.v1.websockets.models.events;
 
 public class ServerMessage {
-    private String name;
+    private String event;
     private Object payload;
 
     public ServerMessage(String name, Object payload) {
-        this.name = name;
+        this.event = name;
         this.payload = payload;
     }
 
-    public String getName() {
-        return name;
+    public String getEvent() {
+        return event;
     }
 
     public Object getPayload() {
         return payload;
     }
 
-    public void setName(String name) {
-        this.name = name;
+    public void setEvent(String event) {
+        this.event = event;
     }
 
     public void setPayload(Object payload) {

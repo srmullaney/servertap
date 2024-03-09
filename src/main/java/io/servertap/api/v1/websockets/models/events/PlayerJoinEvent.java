@@ -1,17 +1,17 @@
-package io.servertap.api.v1.models.events;
+package io.servertap.api.v1.websockets.models.events;
 
 import com.google.gson.annotations.Expose;
 import io.servertap.api.v1.models.Player;
 import io.servertap.webhooks.models.events.WebhookEvent;
 
-public class PlayerJoinSseEvent extends WebhookEvent {
+public class PlayerJoinEvent extends WebhookEvent {
     @Expose
     Player player;
 
     @Expose
     String joinMessage;
 
-    public PlayerJoinSseEvent() {
+    public PlayerJoinEvent() {
         eventType = EventType.PlayerJoin;
     }
 

@@ -24,9 +24,9 @@ public class MojangApiService {
         return Optional.empty();
     }
 
-    private static Optional<PlayerInfo> getPlayerInfo(String username, String getUuidResource) throws IOException {
+    private static Optional<PlayerInfo> getPlayerInfo(String username, String url) throws IOException {
         Gson gson = GsonSingleton.getInstance();
-        ApiResponse apiResponse = getApiResponse(String.format(getUuidResource, username));
+        ApiResponse apiResponse = getApiResponse(String.format(url, username));
         PlayerInfo player = gson.fromJson(apiResponse.getContent(), PlayerInfo.class);
         return player == null ? Optional.empty() : Optional.of(player);
     }
